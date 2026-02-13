@@ -1,0 +1,40 @@
+- name: Настройка Nginx для раздачи статики
+  hosts: all
+  become: yes
+  tasks:
+    - name: Установка Nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: Создание директории для файлов
+      file:
+        path: /var/www/static_files
+        state: directory
+        owner: nginx
+        group: nginx
+        mode: '0755'
+
+    - name: Создание тестовых файлов
+      file:
+        path: "/var/www/static_files/file_{{ item }}.txt"
+        state: touch
+      loop: [1, 2, 3]
+
+    - name: Копирование конфигурации Nginx
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/conf.d/static_site.conf
+      notify: Reload Nginx
+
+    - name: Запуск и включение Nginx (для Fedora/CentOS это важно)
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
