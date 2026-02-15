@@ -1,24 +1,29 @@
-
-- name: Configure Nginx port
+- name: Nginx Custom Port
   hosts: all
   become: yes
+  vars:
+    target_port: 8085
 
   tasks:
-    - name: Allow port in SELinux
+    - name: Validate port
+      chek:
+        port: "{{ target_port }}"
+
+    - name: SELinux allow port
       seport:
         ports: "{{ target_port }}"
         proto: tcp
         setype: http_port_t
         state: present
 
-    - name: Update Nginx config
+    - name: Config Nginx
       template:
         src: nginx.conf.j2
         dest: /etc/nginx/conf.d/custom_port.conf
-      notify: Restart Nginx
+      notify: Reload Nginx
 
   handlers:
-    - name: Restart Nginx
+    - name: Reload Nginx
       service:
         name: nginx
-        state: restarted
+        state: reloaded

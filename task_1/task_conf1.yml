@@ -1,4 +1,4 @@
-- name: Настройка Nginx для раздачи статики
+- name: Настройка Nginx для раздачи статики на RedOS
   hosts: all
   become: yes
   tasks:
@@ -7,13 +7,25 @@
         name: nginx
         state: present
 
+    - name: Удаление дефолтного конфига из conf.d
+      file:
+        path: /etc/nginx/conf.d/default.conf
+        state: absent
+
+    - name: Отключение дефолтного listen в nginx.conf
+      replace:
+        path: /etc/nginx/nginx.conf
+        regexp: '^\s*listen\s+80\s+default_server;'
+        replace: '# listen 80 default_server;'
+      notify: Reload Nginx
+
     - name: Создание директории для файлов
       file:
         path: /var/www/static_files
         state: directory
         owner: nginx
         group: nginx
-        mode: '0755'
+        mode: "0755"
 
     - name: Создание тестовых файлов
       file:
@@ -27,7 +39,12 @@
         dest: /etc/nginx/conf.d/static_site.conf
       notify: Reload Nginx
 
-    - name: Запуск и включение Nginx (для Fedora/CentOS это важно)
+    - name: Настройка SELinux для доступа к файлам
+      shell: |
+        chcon -R -t httpd_sys_content_t /var/www/static_files
+      ignore_errors: yes
+
+    - name: Запуск и включение Nginx
       service:
         name: nginx
         state: started
